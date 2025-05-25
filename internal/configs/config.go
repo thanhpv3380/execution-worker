@@ -13,10 +13,10 @@ type Redis struct {
 }
 
 type Config struct {
-	Redis               Redis
-	ExecutionExpireTime int
-	WorkerCount         int
-	WorkerLanguage      string
+	Redis          Redis
+	WorkerCount    int
+	WorkerLanguage string
+	ExecuteTempDir string
 }
 
 var Cfg *Config
@@ -33,9 +33,9 @@ func LoadConfig() *Config {
 			Port:     env.GetInt("REDIS_PORT", 6379),
 			Password: env.GetString("REDIS_PASSWORD", ""),
 		},
-		ExecutionExpireTime: env.GetInt("EXECUTION_EXPIRE_TIME", 300), // seconds
-		WorkerCount:         env.GetInt("WORKER_COUNT", 1),
-		WorkerLanguage:      env.GetString("WORKER_LANGUAGE", "golang"),
+		WorkerCount:    env.GetInt("WORKER_COUNT", 1),
+		WorkerLanguage: env.GetString("WORKER_LANGUAGE", "golang"),
+		ExecuteTempDir: env.GetString("EXECUTE_TEMP_DIR", "./tmp/sandbox"),
 	}
 
 	log.Println("Load config successfully")

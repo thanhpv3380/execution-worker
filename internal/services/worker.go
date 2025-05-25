@@ -1,79 +1,68 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
-	"execution-worker/internal/infra/redis"
 	runnerService "execution-worker/internal/services/runner"
 	"fmt"
 	"time"
 
 	"github.com/thanhpv3380/go-common/logger"
 
-	"github.com/thanhpv3380/execution-producer/internal/types/enums"
+	"github.com/thanhpv3380/execution-producer/pkg/redis"
+	"github.com/thanhpv3380/execution-producer/pkg/types/enums"
 
-	redisTypes "github.com/thanhpv3380/execution-producer/internal/types/redis"
+	redisTypes "github.com/thanhpv3380/execution-producer/pkg/types/redis"
 )
 
-func getRunnerService(language string) runnerService.RunnerService {
-	switch language {
-	case "golang":
-		return runnerService.GetGoRunnerService()
-	default:
-		logger.Warnf("Unsupported language: %s", language)
-		return nil
-	}
-}
-
-func initWorker(workerCount int, language string) {
-	queueName := "code_jobs"
-
-	runnerService := getRunnerService(language)
-	if runnerService == nil {
-		logger.Fatalf("No runner service found for language: %s", language)
-	}
-
-	for i := 1; i <= workerCount; i++ {
-		go worker(i, runnerService)
-	}
-}
-
-func worker(workerId int, runner runnerService.RunnerService) {
+func InitWorker(workerId int, queue string, runner runnerService.RunnerService) {
 	logger.Infof("Worker %d started", workerId)
 
-	executionId, err := listenQueue(queue)
-	if err != nil {
-		logger.Error(fmt.Sprintf("Worker %d listen queue error: %v", workerId), err)
-		time.Sleep(time.Second)
-		return
+	for {
+		executionId, err := redis.BLPop(queue)
+		if err != nil {
+			logger.Error(fmt.Sprintf("Worker %d listen queue error", workerId), err)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		logger.Infof("Worker %d received execution ID: %s", workerId, executionId)
+
+		executionInfoRedisKey := fmt.Sprintf("%s%s", enums.RedisKeyExecutionInfo, executionId)
+		executionRaw, err := redis.Get(executionInfoRedisKey)
+		if err != nil {
+			logger.Error("Error get execution in redis", err)
+			continue
+		}
+
+		var execution redisTypes.Execution
+
+		err = json.Unmarshal([]byte(executionRaw), &execution)
+		if err != nil {
+			logger.Error("Error marshal execution", err)
+			continue
+		}
+
+		result, err := runner.Run(execution.Code)
+
+		now := time.Now()
+		execution.FinishedAt = &now
+
+		if err != nil {
+			logger.Error(fmt.Sprintf("Worker %d run execution error", workerId), err)
+			execution.Result = err.Error()
+			execution.Status = enums.ExecuteStatusFailed
+		} else {
+			logger.Infof("Worker %d execution result: %s", workerId, result)
+			execution.Status = enums.ExecuteStatusCompleted
+			execution.Result = result
+		}
+
+		executionByte, err := json.Marshal(execution)
+		if err != nil {
+			logger.Error("Error marshal execution", err)
+			continue
+		}
+
+		redis.Set(executionInfoRedisKey, executionByte, -1)
 	}
-
-	executionRaw, err := redis.Get(fmt.Sprintf("%s%s", enums.RedisKeyExecutionInfo, executionId))
-	if err != nil {
-		logger.Error("Error get execution in redis", err)
-		return
-	}
-
-	var execution redisTypes.Execution
-
-	err = json.Unmarshal([]byte(executionRaw), &execution)
-	if err != nil {
-		logger.Error("Error marshal execution", err)
-		return
-	}
-
-	runner.Run(execution.C)
-}
-
-func listenQueue(ctx context.Context, queue string) (string, error) {
-	result, err := redis.Client.BLPop(ctx, 0*time.Second, queue).Result()
-	if err != nil {
-		return "", err
-	}
-
-	if len(result) < 2 {
-		return "", fmt.Errorf("unexpected BLPOP result: %v", result)
-	}
-
-	return result[1], nil
 }

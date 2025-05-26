@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
-	runnerService "execution-worker/internal/services/runner"
 	"fmt"
 	"time"
+
+	runnerService "github.com/thanhpv3380/execution-worker/internal/services/runner"
 
 	"github.com/thanhpv3380/go-common/logger"
 
@@ -14,23 +16,30 @@ import (
 	redisTypes "github.com/thanhpv3380/execution-producer/pkg/types/redis"
 )
 
-func InitWorker(workerId int, queue string, runner runnerService.RunnerService) {
-	logger.Infof("Worker %d started", workerId)
+func InitWorker(ctx context.Context, queue string, runner runnerService.RunnerService) {
+	loggerCtx := logger.FromContext(ctx)
+	loggerCtx.Info("Worker started")
+
+	defer loggerCtx.Info("Worker finished")
 
 	for {
 		executionId, err := redis.BLPop(queue)
 		if err != nil {
-			logger.Error(fmt.Sprintf("Worker %d listen queue error", workerId), err)
+			loggerCtx.Error("Worker listen queue error", err)
 			time.Sleep(time.Second)
 			continue
 		}
 
-		logger.Infof("Worker %d received execution ID: %s", workerId, executionId)
+		subCtx := logger.AppendLogFields(ctx, map[string]interface{}{"executionId": executionId})
+		subLoggerCtx := logger.FromContext(subCtx)
+
+		subLoggerCtx.Infof("Received execution")
 
 		executionInfoRedisKey := fmt.Sprintf("%s%s", enums.RedisKeyExecutionInfo, executionId)
+
 		executionRaw, err := redis.Get(executionInfoRedisKey)
 		if err != nil {
-			logger.Error("Error get execution in redis", err)
+			subLoggerCtx.Errorw("Error get execution in redis", err)
 			continue
 		}
 
@@ -38,31 +47,44 @@ func InitWorker(workerId int, queue string, runner runnerService.RunnerService) 
 
 		err = json.Unmarshal([]byte(executionRaw), &execution)
 		if err != nil {
-			logger.Error("Error marshal execution", err)
+			subLoggerCtx.Errorw("Error marshal execution", err)
 			continue
 		}
 
-		result, err := runner.Run(execution.Code)
+		result, err := runner.Run(subCtx, execution.Code)
 
 		now := time.Now()
 		execution.FinishedAt = &now
 
 		if err != nil {
-			logger.Error(fmt.Sprintf("Worker %d run execution error", workerId), err)
+			subLoggerCtx.Errorw("Error run execution", err)
 			execution.Result = err.Error()
 			execution.Status = enums.ExecuteStatusFailed
 		} else {
-			logger.Infof("Worker %d execution result: %s", workerId, result)
+			subLoggerCtx.Infof("Execution result: %s", result)
 			execution.Status = enums.ExecuteStatusCompleted
 			execution.Result = result
 		}
 
 		executionByte, err := json.Marshal(execution)
 		if err != nil {
-			logger.Error("Error marshal execution", err)
+			subLoggerCtx.Errorw("Error marshal execution", err)
 			continue
 		}
 
-		redis.Set(executionInfoRedisKey, executionByte, -1)
+		ttl, err := redis.TTL(executionInfoRedisKey)
+		if err != nil {
+			subLoggerCtx.Errorw("Error get TTL", err)
+			continue
+		}
+
+		if ttl == -2 || ttl == 0 {
+			subLoggerCtx.Warnf("No TTL or key not exist: %s", ttl)
+			continue
+		}
+
+		redis.Set(executionInfoRedisKey, executionByte, ttl)
+		subLoggerCtx.Infof("Save execution result to redis successfully")
 	}
+
 }

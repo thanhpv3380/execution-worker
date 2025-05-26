@@ -22,8 +22,10 @@ github.com/redis/go-redis/v9 v9.8.0 h1:q3nRvjrlge/6UD7eTu/DSg2uYiU2mCL0G/uzBWqhi
 github.com/redis/go-redis/v9 v9.8.0/go.mod h1:huWgSWd8mW6+m0VPhJjSSQ+d6Nh1VICQ6Q5lHuCH/Iw=
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
-github.com/thanhpv3380/go-common v1.0.0 h1:E9bXbEbwjBlyHz7WPl9PU/NEVcbmoOu1viZqVWqHRdI=
-github.com/thanhpv3380/go-common v1.0.0/go.mod h1:zU0TaA9UDL7EQDplH21JyXSYi+amfCcAoJAdypDqpmU=
+github.com/thanhpv3380/execution-producer v1.0.3 h1:BZD2y11Sl6CmbxeE4CcYVXBSNVnQ4yooSrAWS0ZCpsE=
+github.com/thanhpv3380/execution-producer v1.0.3/go.mod h1:xwqNJktu97/CEZCJ9TK1Z74Ups7WcWSaOKSVju/CGxw=
+github.com/thanhpv3380/go-common v1.0.2 h1:YNc0CvO/elyjGCcA0Hun2MOKeWh8/zDSt4EIGjGqNoA=
+github.com/thanhpv3380/go-common v1.0.2/go.mod h1:zU0TaA9UDL7EQDplH21JyXSYi+amfCcAoJAdypDqpmU=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
 go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
 go.uber.org/multierr v1.10.0 h1:S0h4aNzvfcFsC3dRF1jLoaov7oRaKqRGC/pUEJ2yvPQ=

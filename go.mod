@@ -1,13 +1,11 @@
-module execution-worker
+module github.com/thanhpv3380/execution-worker
 
 go 1.24.2
 
-replace github.com/thanhpv3380/execution-producer => ../execution-producer
-
 require (
 	github.com/google/uuid v1.6.0
-	github.com/thanhpv3380/execution-producer v1.0.2
-	github.com/thanhpv3380/go-common v1.0.0
+	github.com/thanhpv3380/execution-producer v1.0.3
+	github.com/thanhpv3380/go-common v1.0.2
 )
 
 require (

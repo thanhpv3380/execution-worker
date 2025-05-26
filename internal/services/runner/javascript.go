@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"sync"
 )
@@ -20,6 +21,6 @@ func GetJSRunnerService() RunnerService {
 	return jsRunnerServiceInstance
 }
 
-func (g *jsRunnerService) Run(code string) (string, error) {
+func (g *jsRunnerService) Run(ctx context.Context, code string) (string, error) {
 	return "", fmt.Errorf("Not supported yet")
 }

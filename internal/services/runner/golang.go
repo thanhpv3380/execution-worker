@@ -3,12 +3,14 @@ package services
 import (
 	"bytes"
 	"context"
-	"execution-worker/internal/configs"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
+	"time"
+
+	"github.com/thanhpv3380/execution-worker/internal/configs"
 
 	"github.com/google/uuid"
 	"github.com/thanhpv3380/go-common/logger"
@@ -20,7 +22,6 @@ type goRunnerService struct {
 var (
 	goRunnerServiceInstance RunnerService
 	goOnce                  sync.Once
-	ctx                     = context.Background()
 )
 
 func GetGoRunnerService() RunnerService {
@@ -30,7 +31,9 @@ func GetGoRunnerService() RunnerService {
 	return goRunnerServiceInstance
 }
 
-func (g *goRunnerService) Run(code string) (string, error) {
+func (g *goRunnerService) Run(ctx context.Context, code string) (string, error) {
+	loggerCtx := logger.FromContext(ctx)
+
 	err := os.MkdirAll(configs.Cfg.ExecuteTempDir, 0755)
 	if err != nil {
 		return "", err
@@ -46,13 +49,15 @@ func (g *goRunnerService) Run(code string) (string, error) {
 	defer func() {
 		err = os.Remove(mainFile)
 		if err != nil {
-			logger.Error("Error remove temp file", err)
+			loggerCtx.Errorw("Error remove temp file", err)
 		}
 	}()
 
-	cmd := exec.CommandContext(ctx,
-		"go", "run", mainFile,
-	)
+	executeCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(executeCtx, "go", "run", mainFile)
+	cmd.Process.Signal(os.Interrupt)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

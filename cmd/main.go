@@ -1,14 +1,16 @@
 package main
 
 import (
-	"execution-worker/internal/configs"
-	services "execution-worker/internal/services"
-	runnerServices "execution-worker/internal/services/runner"
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/thanhpv3380/execution-worker/internal/configs"
+	services "github.com/thanhpv3380/execution-worker/internal/services"
+	runnerServices "github.com/thanhpv3380/execution-worker/internal/services/runner"
 
 	"github.com/thanhpv3380/execution-producer/pkg/redis"
 	"github.com/thanhpv3380/execution-producer/pkg/types/enums"
@@ -43,8 +45,12 @@ func initWorkers(cfg *configs.Config) {
 		logger.Fatalf("No runner service found for language: %s", language)
 	}
 
-	for i := 1; i <= cfg.WorkerCount; i++ {
-		go services.InitWorker(i, fmt.Sprintf("%s%s", enums.RedisKeyExecutionQueue, language), runnerService)
+	rootCtx := context.Background()
+	for workerId := 1; workerId <= cfg.WorkerCount; workerId++ {
+		ctx := context.WithValue(rootCtx, logger.ContextLogFieldsKey, map[string]interface{}{
+			"workerId": workerId,
+		})
+		go services.InitWorker(ctx, fmt.Sprintf("%s%s", enums.RedisKeyExecutionQueue, language), runnerService)
 	}
 }
 

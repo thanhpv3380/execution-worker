@@ -53,9 +53,8 @@ func (g *goRunnerService) Run(ctx context.Context, code string) (result string, 
 	}
 
 	defer func() {
-		err = os.Remove(mainFile)
-		if err != nil {
-			loggerCtx.Errorw("Error remove temp file", err)
+		if removeErr := os.Remove(mainFile); removeErr != nil {
+			loggerCtx.Errorw("Error removing temp file", removeErr)
 		}
 	}()
 
@@ -63,14 +62,12 @@ func (g *goRunnerService) Run(ctx context.Context, code string) (result string, 
 	defer cancel()
 
 	cmd := exec.CommandContext(executeCtx, "go", "run", mainFile)
-	cmd.Process.Signal(os.Interrupt)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	err = cmd.Run()
-
 	if err != nil {
 		return "", fmt.Errorf("%s\n%s\n%s", err.Error(), stdout.String(), stderr.String())
 	}

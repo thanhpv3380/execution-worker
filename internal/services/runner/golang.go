@@ -31,10 +31,16 @@ func GetGoRunnerService() RunnerService {
 	return goRunnerServiceInstance
 }
 
-func (g *goRunnerService) Run(ctx context.Context, code string) (string, error) {
+func (g *goRunnerService) Run(ctx context.Context, code string) (result string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic occurred: %v", r)
+		}
+	}()
+
 	loggerCtx := logger.FromContext(ctx)
 
-	err := os.MkdirAll(configs.Cfg.ExecuteTempDir, 0755)
+	err = os.MkdirAll(configs.Cfg.ExecuteTempDir, 0755)
 	if err != nil {
 		return "", err
 	}

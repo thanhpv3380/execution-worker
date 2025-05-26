@@ -22,5 +22,5 @@ func GetJSRunnerService() RunnerService {
 }
 
 func (g *jsRunnerService) Run(ctx context.Context, code string) (string, error) {
-	return "", fmt.Errorf("Not supported yet")
+	return "", fmt.Errorf("not supported yet")
 }

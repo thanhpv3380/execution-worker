@@ -16,8 +16,6 @@ WORKDIR /home/sandboxuser
 COPY --from=builder /app/main ./main
 RUN chmod +x ./main
 
-RUN mkdir /tmp && chown sandboxuser:sandboxgroup /tmp
-
 USER sandboxuser
 
 WORKDIR /home/sandboxuser
